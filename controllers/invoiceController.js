@@ -147,28 +147,29 @@ res.status(500).json(err);
 
 
 exports.getMonthlyExpenses = async (req, res) => {
+  try {
 
-try {
+    const userId = new mongoose.Types.ObjectId(req.userId); // ✅ FIX
 
-const result = await Expense.aggregate([
-{ $match: { userId: req.userId } },
-{
-$group: {
-_id: { $month: "$date" },
-total: { $sum: "$total" }
-}
-},
-{ $sort: { _id: 1 } }
-]);
+    const result = await Expense.aggregate([
+      {
+        $match: { userId: userId } // ✅ correct match
+      },
+      {
+        $group: {
+          _id: { $month: "$date" },
+          total: { $sum: "$total" }
+        }
+      },
+      { $sort: { _id: 1 } }
+    ]);
 
-res.json(result);
+    res.json(result);
 
-} catch (err) {
-
-res.status(500).json(err);
-
-}
-
+  } catch (err) {
+    console.error("Monthly Error:", err);
+    res.status(500).json({ message: "Failed to fetch monthly data" });
+  }
 };
 
 
