@@ -146,19 +146,29 @@ res.status(500).json(err);
 
 
 
+const mongoose = require("mongoose");
+
 exports.getMonthlyExpenses = async (req, res) => {
   try {
-    console.log("USER ID:", req.userId); // 👈 ADD THIS
-
-    const mongoose = require("mongoose");
-
     const userId = new mongoose.Types.ObjectId(req.userId);
 
     const result = await Expense.aggregate([
-      { $match: { userId: userId } },
+      {
+        $match: {
+          userId: userId,
+          date: { $exists: true, $ne: null }
+        }
+      },
+      {
+        $addFields: {
+          safeDate: {
+            $toDate: "$date" // ✅ FORCE conversion
+          }
+        }
+      },
       {
         $group: {
-          _id: { $month: "$date" },
+          _id: { $month: "$safeDate" }, // ✅ USE safeDate
           total: { $sum: "$total" }
         }
       },
@@ -168,7 +178,7 @@ exports.getMonthlyExpenses = async (req, res) => {
     res.json(result);
 
   } catch (err) {
-    console.error("FULL ERROR:", err); // 👈 IMPORTANT
+    console.error("🔥 MONTHLY ERROR:", err);
     res.status(500).json({ message: err.message });
   }
 };
@@ -279,4 +289,63 @@ res.status(500).json(err);
 
 }
 
+};
+
+const Invoice = require("../models/Invoice");
+
+// GET ALL
+exports.getInvoices = async (req, res) => {
+  try {
+    const invoices = await Invoice.find({ userId: req.userId });
+    res.json(invoices);
+  } catch (err) {
+    res.status(500).json(err);
+  }
+};
+
+// CREATE
+exports.createInvoice = async (req, res) => {
+  try {
+    const count = await Invoice.countDocuments();
+
+    const invoice = new Invoice({
+      ...req.body,
+      userId: req.userId,
+      invoiceNumber: `INV-${1000 + count}`,
+    });
+
+    await invoice.save();
+    res.json(invoice);
+  } catch (err) {
+    res.status(500).json(err);
+  }
+};
+
+// UPDATE
+exports.updateInvoice = async (req, res) => {
+  try {
+    const updated = await Invoice.findOneAndUpdate(
+      { _id: req.params.id, userId: req.userId },
+      req.body,
+      { new: true }
+    );
+
+    res.json(updated);
+  } catch (err) {
+    res.status(500).json(err);
+  }
+};
+
+// DELETE
+exports.deleteInvoice = async (req, res) => {
+  try {
+    await Invoice.findOneAndDelete({
+      _id: req.params.id,
+      userId: req.userId,
+    });
+
+    res.json({ msg: "Deleted" });
+  } catch (err) {
+    res.status(500).json(err);
+  }
 };

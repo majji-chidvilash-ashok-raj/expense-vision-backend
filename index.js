@@ -7,6 +7,8 @@ const connectDB = require("./config/db");
 
 const authRoutes = require("./routes/authRoutes");
 const invoiceRoutes = require("./routes/invoiceRoutes");
+const inventoryRoutes = require("./routes/inventoryRoutes")
+const invoiceRealRoutes = require("./routes/invoiceRealRoutes");
 
 const app = express();
 
@@ -30,6 +32,8 @@ res.send("Invoice OCR API running");
 
 app.use("/api/auth", authRoutes);
 app.use("/api/invoice", invoiceRoutes);
+app.use("/api/inventory", inventoryRoutes);
+app.use("/api/invoices", invoiceRealRoutes);
 
 app.use((err, req, res, next) => {
 console.error(err.stack);
