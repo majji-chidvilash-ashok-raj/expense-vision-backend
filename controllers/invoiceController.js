@@ -20,25 +20,26 @@ messages: [
 {
 role: "user",
 content: `
-You are an AI financial assistant.
-
-Extract invoice data and ALSO analyze the expense.
-
-Return ONLY valid JSON in this format:
-
-{
-"vendor":"store name",
-"items":[{"name":"item","quantity":1,"price":100}],
-"total":100,
-"category":"category name",
-"insight":"1 short sentence about spending behavior",
-"recommendation":"1 short actionable suggestion"
-}
+Return STRICT JSON only.
 
 Rules:
-- category must be one of: Food, Electronics, Office, Travel, Shopping, Other
-- insight must be meaningful
-- recommendation must be practical
+- Use double quotes for ALL keys and values
+- Do NOT include any explanation
+- Do NOT include markdown
+- Do NOT include trailing commas
+- JSON must be parseable by JSON.parse()
+
+Format:
+{
+  "vendor": "...",
+  "items": [
+    { "name": "...", "quantity": 1, "price": 100 }
+  ],
+  "total": 100,
+  "category": "...",
+  "insight": "...",
+  "recommendation": "..."
+}
 
 Invoice text:
 ${text}
@@ -69,7 +70,26 @@ const jsonString = aiText.substring(start, end);
 
 
 
-const parsed = JSON.parse(jsonString);
+let parsed;
+
+try {
+  parsed = JSON.parse(jsonString);
+} catch (err) {
+  console.log("RAW AI OUTPUT:", aiText);
+
+  const fixed = jsonString
+    .replace(/(\w+):/g, '"$1":') 
+    .replace(/'/g, '"'); 
+
+  try {
+    parsed = JSON.parse(fixed);
+  } catch (e) {
+    return res.status(500).json({
+      message: "AI returned invalid JSON",
+      raw: aiText
+    });
+  }
+}
 
 
 
